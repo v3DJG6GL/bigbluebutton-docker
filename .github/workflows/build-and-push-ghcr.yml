@@ -4,8 +4,13 @@ name: Build & push images to GHCR
 # Container Registry (ghcr.io/<owner>/*). Faithfully mirrors scripts/publish,
 # but targets GHCR instead of Docker Hub via the IMAGE_PREFIX variable.
 #
-# Trigger it manually from the Actions tab. Images are published under your
-# account/org automatically using the built-in GITHUB_TOKEN (no extra secrets).
+# Runs manually from the Actions tab, and automatically once a week so a fresh
+# rebuild picks up base-image patch updates (e.g. new node:22 / nginx:1.29
+# digests) even when no file changed. Images are published under your account/org
+# automatically using the built-in GITHUB_TOKEN (no extra secrets).
+#
+# NOTE: the weekly `schedule` only fires when this workflow lives on the
+# repository's DEFAULT branch (develop). On a feature branch, use manual runs.
 
 on:
   workflow_dispatch:
@@ -14,6 +19,9 @@ on:
         description: 'Services to build ("all" or a space-separated subset, e.g. "haproxy webhooks")'
         default: 'all'
         required: false
+  schedule:
+    # Mondays 04:30 UTC — full rebuild & republish to refresh base images.
+    - cron: '30 4 * * 1'
 
 permissions:
   contents: read

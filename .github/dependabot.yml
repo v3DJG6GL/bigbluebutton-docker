@@ -1,0 +1,42 @@
+version: 2
+
+# Automated dependency updates for the parts that are SAFE to bump on their own.
+#
+# Intentionally NOT covered here (they are version-locked to a BBB release and
+# must move together, which is what syncing upstream bigbluebutton/docker does):
+#   - the repos/* git submodules (BBB component sources)
+#   - BBB_BUILD_TAG in scripts/generate-compose
+#   - bigbluebutton/bbb-build (referenced via the $BBB_BUILD_TAG ARG, so it is
+#     skipped automatically)
+#
+# Base-image *patch* refreshes of the same tag (e.g. a new node:22 digest) are
+# not handled by Dependabot; the weekly scheduled build in
+# build-and-push-ghcr.yml re-pulls those and republishes.
+
+updates:
+  # Third-party base images used to build the mod/* images.
+  - package-ecosystem: "docker"
+    directories:
+      - "/mod/**"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      docker-base-images:
+        patterns: ["*"]
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # Versions of the actions used by our workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns: ["*"]
+    labels:
+      - "dependencies"
+      - "github-actions"
