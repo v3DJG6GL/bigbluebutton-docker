@@ -1,0 +1,127 @@
+name: Build & push images to GHCR
+
+# Builds the BigBlueButton mod/* images and pushes them to the GitHub
+# Container Registry (ghcr.io/<owner>/*). Faithfully mirrors scripts/publish,
+# but targets GHCR instead of Docker Hub via the IMAGE_PREFIX variable.
+#
+# Trigger it manually from the Actions tab. Images are published under your
+# account/org automatically using the built-in GITHUB_TOKEN (no extra secrets).
+
+on:
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'Services to build ("all" or a space-separated subset, e.g. "haproxy webhooks")'
+        default: 'all'
+        required: false
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ghcr-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Move Docker data-root to the large /mnt disk
+        # The default / partition on hosted runners has ~14 GB free, which is
+        # not enough for the full BBB image set. /mnt has ~65 GB, so point
+        # Docker there before anything is built or pulled.
+        run: |
+          sudo systemctl stop docker docker.socket || true
+          sudo mkdir -p /mnt/docker
+          echo '{ "data-root": "/mnt/docker" }' | sudo tee /etc/docker/daemon.json
+          sudo systemctl start docker
+          docker info | grep -i "Docker Root Dir"
+          df -h /mnt /
+
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          # Almost every image copies its source from repos/* as build context,
+          # so all submodules must be present. recursive is required by
+          # freeswitch, which compiles from its own nested submodules.
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write build-time .env
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REG="ghcr.io/${OWNER_LC}"
+          cat > .env <<EOF
+          EXTERNAL_IPv4=127.0.0.1
+          DEV_MODE=false
+          ENABLE_RECORDING=true
+          ENABLE_WEBHOOKS=true
+          ENABLE_HTTPS_PROXY=true
+          LETSENCRYPT_EMAIL=ci@example.com
+          ENABLE_GREENLIGHT=false
+          ENABLE_COTURN=false
+          ENABLE_COLLABORA=false
+          ENABLE_PROMETHEUS_EXPORTER=false
+          IMAGE_PREFIX=${REG}/
+          PREFER_TAGS_FILE=true
+          EOF
+          echo "REG=${REG}" >> "$GITHUB_ENV"
+          echo "Publishing to ${REG}/*"
+
+      - name: Generate docker-compose.yml
+        run: ./scripts/generate-compose
+
+      - name: Build & push base-java
+        # Base image for bbb-web, apps-akka, fsesl-akka and freeswitch. It must
+        # keep its local alangecker/ tag so those Dockerfiles' FROM / COPY --from
+        # references resolve against the locally built image.
+        run: |
+          docker build -t alangecker/bbb-docker-base-java:latest mod/base-java
+          docker tag alangecker/bbb-docker-base-java:latest "${REG}/bbb-docker-base-java:latest"
+          docker push "${REG}/bbb-docker-base-java:latest"
+
+      - name: Build & push service images
+        run: |
+          ALL="apps-akka bbb-export-annotations bbb-graphql-actions bbb-graphql-middleware \
+               bbb-graphql-server bbb-pads bbb-web bbb-webrtc-recorder etherpad fsesl-akka \
+               haproxy nginx periodic recordings webhooks webrtc-sfu freeswitch"
+
+          INPUT="${{ github.event.inputs.services }}"
+          if [ -z "$INPUT" ] || [ "$INPUT" = "all" ]; then
+            SERVICES="$ALL"
+          else
+            SERVICES="$INPUT"
+          fi
+
+          echo "Building: $SERVICES"
+          failed=""
+          for svc in $SERVICES; do
+            echo "::group::$svc"
+            if docker compose build "$svc" && docker compose push "$svc"; then
+              echo "OK   $svc"
+              echo "- \`$svc\` ✅" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "FAIL $svc"
+              echo "- \`$svc\` ❌" >> "$GITHUB_STEP_SUMMARY"
+              failed="$failed $svc"
+            fi
+            # keep disk bounded across the sequential builds
+            docker image prune -f >/dev/null 2>&1 || true
+            df -h /mnt | tail -1
+            echo "::endgroup::"
+          done
+
+          if [ -n "$failed" ]; then
+            echo "Failed services:$failed"
+            exit 1
+          fi
+          echo "All requested images pushed to ${REG}/*"

@@ -26,8 +26,14 @@ if [ "$ENABLE_HTTPS_PROXY" ] && [ -z "$LETSENCRYPT_EMAIL" ] && [ -z "$DEV_MODE" 
 fi
 
 function get_tag {
+  # PREFER_TAGS_FILE forces using the cached repos/tags file even when the
+  # submodule is checked out. Useful in CI (submodules are shallow and lack the
+  # tag history `git describe` needs) and to produce the exact same tags a
+  # production server resolves from repos/tags (it has no submodules checked out).
+  if [ "${PREFER_TAGS_FILE:-false}" != "false" ] && grep -q "^$1 " repos/tags 2>/dev/null; then
+    grep "^$1 " repos/tags | awk '{print $2}'
   # is submodule checked out?
-  if [ -f "$1/.git" ]; then
+  elif [ -f "$1/.git" ]; then
     git --git-dir=$1/.git describe --tags --always
   else
     # get cached tag name from repos/tags
@@ -41,6 +47,7 @@ BBB_BUILD_TAG=v3.0.x-release--2025-10-30-133835
 docker run  \
     --rm  \
     -v $(pwd)/docker-compose.tmpl.yml:/docker-compose.tmpl.yml \
+    -e IMAGE_PREFIX=${IMAGE_PREFIX:-alangecker/} \
     -e TAG_BBB=$(get_tag repos/bigbluebutton) \
     -e TAG_FREESWITCH=$(get_tag repos/freeswitch) \
     -e TAG_WEBRTC_SFU=$(get_tag repos/bbb-webrtc-sfu) \

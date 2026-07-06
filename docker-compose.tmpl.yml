@@ -29,7 +29,7 @@ services:
         - src-common-web=./repos/bigbluebutton/bbb-common-web
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
-    image: alangecker/bbb-docker-web:{{ .Env.TAG_BBB }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-web:{{ .Env.TAG_BBB }}
     restart: unless-stopped
     depends_on:
         - redis
@@ -73,7 +73,7 @@ services:
         - fs-config=./repos/bigbluebutton/bbb-voice-conference/config/freeswitch/conf/
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
-    image: alangecker/bbb-docker-freeswitch:{{ .Env.TAG_FREESWITCH }}-{{ .Env.TAG_BBB }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-freeswitch:{{ .Env.TAG_FREESWITCH }}-{{ .Env.TAG_BBB }}
     restart: unless-stopped
     cap_add:
       - IPC_LOCK
@@ -119,7 +119,7 @@ services:
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
         TAG_BBB: {{ .Env.TAG_BBB }}
-    image: alangecker/bbb-docker-nginx:{{ .Env.TAG_BBB }}-{{ .Env.TAG_PLAYBACK }}-1.29
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-nginx:{{ .Env.TAG_BBB }}-{{ .Env.TAG_PLAYBACK }}-1.29
     restart: unless-stopped
     volumes:
       - ./data/bigbluebutton:/var/bigbluebutton
@@ -162,7 +162,7 @@ services:
         - skin=./repos/bbb-etherpad-skin
       args:
         TAG_ETHERPAD: "2.4.2"
-    image: alangecker/bbb-docker-etherpad:2.4.2-s{{ .Env.COMMIT_ETHERPAD_SKIN }}-p{{ .Env.COMMIT_ETHERPAD_PLUGIN }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-etherpad:2.4.2-s{{ .Env.COMMIT_ETHERPAD_SKIN }}-p{{ .Env.COMMIT_ETHERPAD_PLUGIN }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -181,7 +181,7 @@ services:
       context: mod/bbb-pads
       additional_contexts:
         - src=./repos/bbb-pads
-    image: alangecker/bbb-docker-pads:{{ .Env.TAG_PADS }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-pads:{{ .Env.TAG_PADS }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -197,7 +197,7 @@ services:
       context: mod/bbb-export-annotations
       additional_contexts:
         src: ./repos/bigbluebutton/bbb-export-annotations
-    image: alangecker/bbb-docker-bbb-export-annotations:{{ .Env.TAG_BBB }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-bbb-export-annotations:{{ .Env.TAG_BBB }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -236,7 +236,7 @@ services:
         - source=./repos/bbb-webrtc-sfu
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
-    image: alangecker/bbb-docker-webrtc-sfu:{{ .Env.TAG_WEBRTC_SFU }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-webrtc-sfu:{{ .Env.TAG_WEBRTC_SFU }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -267,7 +267,7 @@ services:
         - src-fsesl-akka=./repos/bigbluebutton/akka-bbb-fsesl
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
-    image: alangecker/bbb-docker-fsesl-akka:{{ .Env.TAG_BBB }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-fsesl-akka:{{ .Env.TAG_BBB }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -288,7 +288,7 @@ services:
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
         TAG_BBB: {{ .Env.TAG_BBB }}
-    image: alangecker/bbb-docker-apps-akka:{{ .Env.TAG_BBB }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-apps-akka:{{ .Env.TAG_BBB }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -312,7 +312,7 @@ services:
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
         GRAPHQL_ENGINE_TAG: v2.48.9
-    image: alangecker/bbb-docker-graphql-server:{{ .Env.TAG_BBB }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-graphql-server:{{ .Env.TAG_BBB }}
     depends_on:
       - postgres
       - bbb-web
@@ -345,7 +345,7 @@ services:
       {{ end }}
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
-    image: alangecker/bbb-docker-graphql-actions:{{ .Env.TAG_BBB }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-graphql-actions:{{ .Env.TAG_BBB }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -370,7 +370,7 @@ services:
       {{ end }}
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
-    image: alangecker/bbb-docker-graphql-middleware:{{ .Env.TAG_BBB }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-graphql-middleware:{{ .Env.TAG_BBB }}
     restart: unless-stopped
     depends_on:
       - bbb-graphql-server
@@ -407,7 +407,7 @@ services:
 
   periodic:
     build: mod/periodic
-    image: alangecker/bbb-docker-periodic:v3.0.0
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-periodic:v3.0.0
     restart: unless-stopped
 
     volumes:
@@ -436,7 +436,7 @@ services:
       args:
         BBB_BUILD_TAG: {{ .Env.BBB_BUILD_TAG }}
         TAG_BBB_PRESENTATION_VIDEO: "5.1.0-beta.2"
-    image: alangecker/bbb-docker-recordings:{{ .Env.TAG_BBB }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-recordings:{{ .Env.TAG_BBB }}
     restart: unless-stopped
     depends_on:
       - redis
@@ -461,7 +461,7 @@ services:
       context: mod/bbb-webrtc-recorder
       additional_contexts:
         - src=./repos/bbb-webrtc-recorder
-    image: alangecker/bbb-docker-webrtc-recorder:{{ .Env.TAG_WEBRTC_RECORDER }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-webrtc-recorder:{{ .Env.TAG_WEBRTC_RECORDER }}
     depends_on:
       - redis
     volumes: 
@@ -480,7 +480,7 @@ services:
       context: mod/webhooks
       additional_contexts:
         - src=./repos/bbb-webhooks
-    image: alangecker/bbb-docker-webhooks:{{ .Env.TAG_WEBHOOKS }}
+    image: {{ .Env.IMAGE_PREFIX }}bbb-docker-webhooks:{{ .Env.TAG_WEBHOOKS }}
     restart: unless-stopped
     environment:
       DOMAIN: ${DOMAIN}
@@ -496,7 +496,7 @@ services:
 
   haproxy:
     build: mod/haproxy
-    image: alangecker/bbb-haproxy:3.0.9
+    image: {{ .Env.IMAGE_PREFIX }}bbb-haproxy:3.0.9
     restart: unless-stopped
     volumes:
       - ./data/haproxy/letsencrypt:/etc/letsencrypt
